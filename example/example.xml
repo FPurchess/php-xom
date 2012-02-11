@@ -2,7 +2,17 @@
 <books>
     <book id="1">
         <title>Fairy Tales and Furry Tails</title>
-        <author>Florian Purchess</author>
+        <authors>
+            <author>Florian Purchess</author>
+            <author>Peter Pan</author>
+        </authors>
         <publishDate>2012-02-11</publishDate>
+    </book>
+    <book id="2">
+        <title>Chains and Stuff</title>
+        <authors>
+            <author>Famous Bluesmen</author>
+        </authors>
+        <publishDate>1949-02-11</publishDate>
     </book>
 </books>
