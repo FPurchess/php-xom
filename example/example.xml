@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<books>
+    <book id="1">
+        <title>Fairy Tales and Furry Tails</title>
+        <author>Florian Purchess</author>
+        <publishDate>2012-02-11</publishDate>
+    </book>
+</books>
