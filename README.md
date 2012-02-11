@@ -3,7 +3,7 @@ php-xom is an experiment of a xml-object-mapper written in php.
 Currently there is nothing but a simple proof of the possibility
 and it is truely everything else, than nice coding.
 
-## reason ##
+## Reason ##
 I'm often forced to have a data-layer crafting smaller applications.
 Because databases such as MySql often require setup and a lot more
 code, I sometimes choose file over database.
