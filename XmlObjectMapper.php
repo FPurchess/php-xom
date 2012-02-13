@@ -1,6 +1,7 @@
 <?php
 
 require("XmlObj.php");
+require("XmlObjResults.php");
 require("XmlObjectMapperException.php");
 
 /**
@@ -14,57 +15,140 @@ class XmlObjectMapper {
     private $xml;
 
     /**
+     * @var string
+     */
+    private $file;
+
+    /**
+     * @var array
+     */
+    private $objects = array();
+
+
+    /**
      * @param $file
      */
     public function __construct($file) {
-        $this->xml = simplexml_load_file($file);
+        $this->load($file);
     }
 
     /**
-     * @param string $query
+     *
+     */
+    public function __destruct() {
+        $this->save();
+    }
+
+    /**
+     * @param $file
+     */
+    public function load($file) {
+        $this->file = $file;
+        $this->xml = simplexml_load_file($file);
+
+        $rootElements = $this->xml->children();
+        foreach ($rootElements as $rootElement) {
+            foreach ($rootElement as $node) {
+                $this->mapNode($node);
+            }
+        }
+    }
+
+    /**
+     * @return boolean
+     */
+    public function save() {
+        $this->xml = new SimpleXMLElement("<content/>");
+
+        foreach ($this->objects as $class => $objects) {
+            $class = strtolower($class);
+            $rootElements = $this->xml->addChild($class . 's');
+
+            foreach ($objects as $object) {
+                $node = $rootElements->addChild($class);
+                $this->mapObject($node, $object);
+            }
+        }
+
+        return $this->xml->asXML($this->file);
+    }
+
+    /**
      * @param string $class
      * @return array
-     * @throws XmlObjectMapperException
      */
-    public function getObjects($query, $class) {
-        if (in_array('XmlObj', class_implements($class))) {
-            throw new XmlObjectMapperException("Class does not implement XmlObj");
+    public function getObjects($class) {
+        if (array_key_exists($class, $this->objects)) {
+            return $this->objects[$class];
         }
 
-        $objects = array();
-        $nodes = $this->xml->xpath($query);
-
-        foreach ($nodes as $node) {
-            $objects[] = $this->mapNode($node, $class);
-        }
-
-        return $objects;
+        return null;
     }
 
     /**
-     * @param $query
-     * @param $class
-     * @return mixed|null
-     * @throws XmlObjectMapperException
+     * @param $object
      */
-    public function getObject($query, $class) {
-        if (in_array('XmlObj', class_implements($class))) {
-            throw new XmlObjectMapperException("Class does not implement XmlObj");
-        }
-
-        $nodes = $this->xml->xpath($query);
-        if (!isset($nodes[0])) return null;
-
-        return $this->mapNode($nodes[0], $class);
+    public function persist(&$object) {
+        $this->objects[get_class($object)][] = $object;
     }
 
     /**
-     * @param \SimpleXMLElement $node
-     * @param $class
+     * @param string $class
+     * @return XmlObjResults
+     */
+    public function get($class) {
+        if (array_key_exists($class, $this->objects)) {
+            return new XmlObjResults($this->objects[$class]);
+        }
+
+        return new XmlObjResults(array());
+    }
+
+    /**
+     * @param SimpleXMLElement $node
+     * @param XmlObj $object
+     */
+    private function mapObject($node, $object) {
+        $values = $object->getAttributes();
+
+        foreach ($values as $key => $value) {
+            if (is_array($value)) {
+                $item = $node->addChild($key);
+                $this->mapArray($item, $value);
+            } else {
+                $node->addChild($key, (string)$value);
+            }
+        }
+    }
+
+    /**
+     * @param SimpleXMLElement $node
+     * @param array $array
+     */
+    private function mapArray($node, $array) {
+        $type = $node->getName();
+        $type = substr($type, 0, count($type) - 2);
+
+        foreach ($array as $key => $value) {
+            $node->addChild(is_numeric($key) ? $type : $key, (string)$value);
+        }
+    }
+
+    /**
+     * @param SimpleXMLElement $node
      * @return mixed
      */
-    private function mapNode(SimpleXMLElement $node, $class) {
+    private function mapNode($node) {
+        $class = ucfirst($node->getName());
         $obj = new $class;
+
+        if (!class_exists($class)) {
+            throw new XmlObjectMapperException("Class '" . $class . "' does not exist");
+        }
+
+        if (in_array('XmlObj', class_implements($class))) {
+            throw new XmlObjectMapperException("Class does not implement XmlObj");
+        }
 
         foreach ($node->attributes() as $key => $value) {
             $obj->mapAttribute($key, (string)$value);
@@ -74,7 +158,7 @@ class XmlObjectMapper {
             $obj->mapAttribute($child->getName(), $this->mapChild($child));
         }
 
-        return $obj;
+        $this->objects[$class][] = $obj;
     }
 
     /**
