@@ -37,6 +37,21 @@ class XmlObjResults implements Iterator {
     }
 
     /**
+     * @param string $key
+     * @param $value
+     * @return XmlObjResults
+     */
+    public function whereNotEquals($key, $value) {
+        foreach($this->results as $id => $object) {
+            if (!$object->getAttribute($key) != $value) {
+                unset($this->results[$id]);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
      * @return int
      */
     public function count() {

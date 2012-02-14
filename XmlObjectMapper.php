@@ -2,6 +2,7 @@
 
 require("XmlObj.php");
 require("XmlObjResults.php");
+require("XmlTypeConverter.php");
 require("XmlObjectMapperException.php");
 
 /**
@@ -24,20 +25,27 @@ class XmlObjectMapper {
      */
     private $objects = array();
 
+    /**
+     * @var bool
+     */
+    private $autosave;
 
     /**
-     * @param $file
+     * @var XmlTypeConverter
      */
-    public function __construct($file) {
+    private $typeConverter;
+
+
+    /**
+     * @param string $file
+     * @param bool $autosave
+     */
+    public function __construct($file, $autosave = true) {
+        $this->autosave = $autosave;
+        $this->typeConverter = new XmlTypeConverter();
         $this->load($file);
     }
 
-    /**
-     *
-     */
-    public function __destruct() {
-        $this->save();
-    }
 
     /**
      * @param $file
@@ -49,7 +57,7 @@ class XmlObjectMapper {
         $rootElements = $this->xml->children();
         foreach ($rootElements as $rootElement) {
             foreach ($rootElement as $node) {
-                $this->mapNode($node);
+                $this->nodeToObject($node);
             }
         }
     }
@@ -66,7 +74,7 @@ class XmlObjectMapper {
 
             foreach ($objects as $object) {
                 $node = $rootElements->addChild($class);
-                $this->mapObject($node, $object);
+                $this->objectToNode($node, $object);
             }
         }
 
@@ -108,29 +116,11 @@ class XmlObjectMapper {
      * @param SimpleXMLElement $node
      * @param XmlObj $object
      */
-    private function mapObject($node, $object) {
-        $values = $object->getAttributes();
+    private function objectToNode($node, $object) {
+        $attributes = $object->getAttributes();
 
-        foreach ($values as $key => $value) {
-            if (is_array($value)) {
-                $item = $node->addChild($key);
-                $this->mapArray($item, $value);
-            } else {
-                $node->addChild($key, (string)$value);
-            }
-        }
-    }
-
-    /**
-     * @param SimpleXMLElement $node
-     * @param array $array
-     */
-    private function mapArray($node, $array) {
-        $type = $node->getName();
-        $type = substr($type, 0, count($type) - 2);
-
-        foreach ($array as $key => $value) {
-            $node->addChild(is_numeric($key) ? $type : $key, (string)$value);
+        foreach ($attributes as $key => $value) {
+            $this->typeConverter->convertAttribute($key, $value, $node);
         }
     }
 
@@ -138,7 +128,7 @@ class XmlObjectMapper {
      * @param SimpleXMLElement $node
      * @return mixed
      */
-    private function mapNode($node) {
+    private function nodeToObject($node) {
         $class = ucfirst($node->getName());
         $obj = new $class;
 
@@ -150,31 +140,19 @@ class XmlObjectMapper {
             throw new XmlObjectMapperException("Class does not implement XmlObj");
         }
 
-        foreach ($node->attributes() as $key => $value) {
-            $obj->mapAttribute($key, (string)$value);
-        }
-
         foreach ($node->children() as $child) {
-            $obj->mapAttribute($child->getName(), $this->mapChild($child));
+            $value = $this->typeConverter->convertXmlElement($child);
+            $obj->mapAttribute($child->getName(), $value);
         }
 
         $this->objects[$class][] = $obj;
     }
 
-    /**
-     * @param $node
-     * @return array|string
-     */
-    private function mapChild($node) {
-        if (is_object($node) && $node->count()) {
-            $values = array();
-            foreach ($node->children() as $child) {
-                $values[] = $this->mapChild($child);
-            }
-            return $values;
-        }
 
-        return (string)$node;
+    public function __destruct() {
+        if ($this->autosave) {
+            $this->save();
+        }
     }
 
 }

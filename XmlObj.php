@@ -20,6 +20,10 @@ class XmlObj {
         $this->{$name} = $value;
     }
 
+    /**
+     * @param string $key
+     * @return mixed
+     */
     public function getAttribute($key) {
         return $this->{$key};
     }
