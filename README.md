@@ -49,7 +49,7 @@ Initalize a new object-mapper
 You can then fetch objects using the XmlObjectResults-Set...
 `$books = $mapper->get('Book');`
 
-...and filter them using various comparation-methods:
+...and filter them using various comparation-methods:  
 `$books->whereEquals('title', 'Fairy Tales and Furry Tails');`
 
 ## License ##
