@@ -1,6 +1,5 @@
 <?php
 
-require("XmlObj.php");
 require("XmlObjResults.php");
 require("XmlTypeConverter.php");
 require("XmlObjectMapperException.php");
@@ -34,6 +33,11 @@ class XmlObjectMapper {
      * @var XmlTypeConverter
      */
     private $typeConverter;
+
+    /**
+     * @var array
+     */
+    private $reflections = array();
 
 
     /**
@@ -69,12 +73,19 @@ class XmlObjectMapper {
         $this->xml = new SimpleXMLElement("<content/>");
 
         foreach ($this->objects as $class => $objects) {
+            $reflection = $this->getReflection($class);
+
             $class = strtolower($class);
             $rootElements = $this->xml->addChild($class . 's');
 
             foreach ($objects as $object) {
                 $node = $rootElements->addChild($class);
-                $this->objectToNode($node, $object);
+
+                foreach ($reflection->getProperties() as $property) {
+                    $property->setAccessible(true);
+                    $this->typeConverter->convertAttribute($property->getName(), $property->getValue($object), $node);
+                }
+                //$this->objectToNode($node, $object);
             }
         }
 
@@ -99,10 +110,15 @@ class XmlObjectMapper {
      */
     public function get($class) {
         if (array_key_exists($class, $this->objects)) {
-            return new XmlObjResults($this->objects[$class]);
+
+            if (!class_exists($class)) {
+                throw new XmlObjectMapperException("Class '" . $class . "' does not exist");
+            }
+
+            return new XmlObjResults($this->objects[$class], $this->getReflection($class));
         }
 
-        return new XmlObjResults(array());
+        return new XmlObjResults(array(), $this->getReflection($class));
     }
 
     /**
@@ -113,15 +129,15 @@ class XmlObjectMapper {
     }
 
     /**
-     * @param SimpleXMLElement $node
-     * @param XmlObj $object
+     * @param string $class
+     * @return ReflectionClass
      */
-    private function objectToNode($node, $object) {
-        $attributes = $object->getAttributes();
-
-        foreach ($attributes as $key => $value) {
-            $this->typeConverter->convertAttribute($key, $value, $node);
+    private function getReflection($class) {
+        if (!array_key_exists($class, $this->reflections)) {
+            $this->reflections[$class] = new ReflectionClass($class);
         }
+
+        return $this->reflections[$class];
     }
 
     /**
@@ -130,20 +146,19 @@ class XmlObjectMapper {
      */
     private function nodeToObject($node) {
         $class = ucfirst($node->getName());
-
-        if (!class_exists($class)) {
-            throw new XmlObjectMapperException("Class '" . $class . "' does not exist");
-        }
-
-        if (in_array('XmlObj', class_implements($class))) {
-            throw new XmlObjectMapperException("Class does not implement XmlObj");
-        }
-
-        $obj = new $class;
+        $reflection = $this->getReflection($class);
+        $obj = $reflection->newInstance();
 
         foreach ($node->children() as $child) {
-            $value = $this->typeConverter->convertXmlElement($child);
-            $obj->mapAttribute($child->getName(), $value);
+            $name = $child->getName();
+
+            if ($reflection->hasProperty($name)) {
+                $value = $this->typeConverter->convertXmlElement($child);
+
+                $property = $reflection->getProperty($name);
+                $property->setAccessible(true);
+                $property->setValue($obj, $value);
+            }
         }
 
         $this->objects[$class][] = $obj;

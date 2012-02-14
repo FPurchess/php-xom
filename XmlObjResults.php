@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * @author Florian Purchess
+ */
 class XmlObjResults implements Iterator {
 
     const COMPARATOR_EQUALS = 0;
@@ -20,12 +23,19 @@ class XmlObjResults implements Iterator {
      */
     private $position = 0;
 
+    /**
+     * @var ReflectionClass
+     */
+    private $reflection;
+
 
     /**
-     * @param array $objects
+     * @param array $results
+     * @param ReflectionClass $reflection
      */
-    public function __construct($objects) {
-        $this->results = $objects;
+    public function __construct($results, &$reflection) {
+        $this->results = $results;
+        $this->reflection = $reflection;
     }
 
     /**
@@ -59,8 +69,12 @@ class XmlObjResults implements Iterator {
      * @param int $type
      */
     private function filter($key, $value, $type) {
+        $property = $this->reflection->getProperty($key);
+        $property->setAccessible(true);
+
         foreach ($this->results as $id => $object) {
-            $data = $object->getAttribute($key);
+
+            $data = $property->getValue($object);
             if (!$this->comparate($value, $data, $type)) {
                 unset($this->results[$id]);
             }
@@ -148,18 +162,18 @@ class XmlObjResults implements Iterator {
     }
 
     /**
-     * @return XmlObj|null
+     * @return object|null
      */
     public function getSingleResult() {
         if (!empty($this->results)) {
-            return $this->results[0];
+            return array_shift($this->results);
         }
 
         return null;
     }
 
     /**
-     * @return XmlObj
+     * @return object
      */
     public function current() {
         return $this->results[$this->position];

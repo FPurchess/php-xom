@@ -7,11 +7,11 @@ require("../XmlObjectMapper.php");
 
 // This is our example class with some attributes,
 // that shall be mapped by our xml-object-mapper
-class Book extends XmlObj {
-    protected $id;
-    protected $title;
-    protected $authors;
-    protected $publishDate;
+class Book {
+    private $id;
+    private $title;
+    private $authors;
+    private $publishDate;
 
 
     public function getId() {
