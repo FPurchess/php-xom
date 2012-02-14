@@ -94,13 +94,6 @@ class XmlObjectMapper {
     }
 
     /**
-     * @param $object
-     */
-    public function persist(&$object) {
-        $this->objects[get_class($object)][] = $object;
-    }
-
-    /**
      * @param string $class
      * @return XmlObjResults
      */
@@ -110,6 +103,13 @@ class XmlObjectMapper {
         }
 
         return new XmlObjResults(array());
+    }
+
+    /**
+     * @param $object
+     */
+    public function persist(&$object) {
+        $this->objects[get_class($object)][] = $object;
     }
 
     /**
@@ -130,7 +130,6 @@ class XmlObjectMapper {
      */
     private function nodeToObject($node) {
         $class = ucfirst($node->getName());
-        $obj = new $class;
 
         if (!class_exists($class)) {
             throw new XmlObjectMapperException("Class '" . $class . "' does not exist");
@@ -140,6 +139,8 @@ class XmlObjectMapper {
             throw new XmlObjectMapperException("Class does not implement XmlObj");
         }
 
+        $obj = new $class;
+
         foreach ($node->children() as $child) {
             $value = $this->typeConverter->convertXmlElement($child);
             $obj->mapAttribute($child->getName(), $value);
@@ -148,6 +149,19 @@ class XmlObjectMapper {
         $this->objects[$class][] = $obj;
     }
 
+    /**
+     * @param boolean $autosave
+     */
+    public function setAutosave($autosave) {
+        $this->autosave = $autosave;
+    }
+
+    /**
+     * @return boolean
+     */
+    public function getAutosave() {
+        return $this->autosave;
+    }
 
     public function __destruct() {
         if ($this->autosave) {
