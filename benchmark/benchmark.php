@@ -43,18 +43,27 @@ class Book extends XmlObj {
     }
 }
 
+$start = microtime();
+
 // instanciate the mapper
-$mapper = new XmlObjectMapper(__DIR__ . "/example.xml");
+$mapper = new XmlObjectMapper(__DIR__ . "/benchmark.xml");
+
+$end = microtime();
+echo '<h2>Initalized in ' . ($end - $start) . '</h2>';
+
+
+
+$start = microtime();
 
 // fetch all objects
 $allBooks = $mapper->getObjects('Book');
 
-// pretty printing of the result
-echo '<pre>' . print_r($allBooks, true) . '</pre>';
+$end = microtime();
+echo '<h2>Fetched all Books in ' . ($end - $start) . '</h2>';
 
-// note that all objects are in persistance-context by default
-// this changes will be saved automatically
-$allBooks[1]->setPublishDate("2012-02-" . rand(10,31));
+
+
+$start = microtime();
 
 // this is how to perform a search
 $book = $mapper
@@ -62,8 +71,14 @@ $book = $mapper
     ->whereEquals('title', 'Chains and Stuff')
     ->getSingleResult();
 
-if ($book) {
-    echo "found your book titled '" . $book->getTitle() . "', written on " . $book->getPublishDate() . ' by ' . implode(' & ', $book->getAuthors());
-} else {
-    echo "Sorry, book not found";
-}
+$end = microtime();
+echo '<h2>Searched for Books in ' . ($end - $start) . '</h2>';
+
+
+
+$start = microtime();
+
+$mapper->save();
+
+$end = microtime();
+echo '<h2>Saved all Books in in ' . ($end - $start) . '</h2>';
