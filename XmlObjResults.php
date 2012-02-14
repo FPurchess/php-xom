@@ -2,6 +2,14 @@
 
 class XmlObjResults implements Iterator {
 
+    const COMPARATOR_EQUALS = 0;
+    const COMPARATOR_NOT_EQUALS = 1;
+    const COMPARATOR_GREATER = 2;
+    const COMPARATOR_GREATER_EQUALS = 3;
+    const COMPARATOR_LESS = 4;
+    const COMPARATOR_LESS_EQUALS = 5;
+
+
     /**
      * @var array
      */
@@ -20,33 +28,107 @@ class XmlObjResults implements Iterator {
         $this->results = $objects;
     }
 
+    /**
+     * @param $value1
+     * @param $value2
+     * @param $type
+     * @return bool
+     */
+    private function comparate($value1, $value2, $type) {
+        switch ($type) {
+            case XmlObjResults::COMPARATOR_EQUALS:
+                return $value1 == $value2;
+            case XmlObjResults::COMPARATOR_NOT_EQUALS:
+                return $value1 != $value2;
+            case XmlObjResults::COMPARATOR_GREATER:
+                return $value1 < $value2;
+            case XmlObjResults::COMPARATOR_GREATER_EQUALS:
+                return $value1 <= $value2;
+            case XmlObjResults::COMPARATOR_LESS:
+                return $value1 > $value2;
+            case XmlObjResults::COMPARATOR_LESS_EQUALS:
+                return $value1 >= $value2;
+        }
+
+        return $value1 == $value2;
+    }
 
     /**
-     * @param $key
-     * @param $value
-     * @return XmlObjResults
+     * @param string $key
+     * @param mixed $value
+     * @param int $type
      */
-    public function whereEquals($key, $value) {
-        foreach($this->results as $id => $object) {
-            if (!$object->getAttribute($key) == $value) {
+    private function filter($key, $value, $type) {
+        foreach ($this->results as $id => $object) {
+            $data = $object->getAttribute($key);
+            if (!$this->comparate($value, $data, $type)) {
                 unset($this->results[$id]);
             }
         }
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     * @return XmlObjResults
+     */
+    public function whereEquals($key, $value) {
+        $this->filter($key, $value, XmlObjResults::COMPARATOR_EQUALS);
 
         return $this;
     }
 
     /**
      * @param string $key
-     * @param $value
+     * @param mixed $value
      * @return XmlObjResults
      */
     public function whereNotEquals($key, $value) {
-        foreach($this->results as $id => $object) {
-            if (!$object->getAttribute($key) != $value) {
-                unset($this->results[$id]);
-            }
-        }
+        $this->filter($key, $value, XmlObjResults::COMPARATOR_NOT_EQUALS);
+
+        return $this;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     * @return XmlObjResults
+     */
+    public function whereGreater($key, $value) {
+        $this->filter($key, $value, XmlObjResults::COMPARATOR_GREATER);
+
+        return $this;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     * @return XmlObjResults
+     */
+    public function whereGreaterEquals($key, $value) {
+        $this->filter($key, $value, XmlObjResults::COMPARATOR_GREATER_EQUALS);
+
+        return $this;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     * @return XmlObjResults
+     */
+    public function whereLess($key, $value) {
+        $this->filter($key, $value, XmlObjResults::COMPARATOR_LESS);
+
+        return $this;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed $value
+     * @return XmlObjResults
+     */
+    public function whereLessEquals($key, $value) {
+        $this->filter($key, $value, XmlObjResults::COMPARATOR_LESS_EQUALS);
 
         return $this;
     }
